@@ -2,3 +2,10 @@ name: SchematicaConverter
 version: '1.0-SNAPSHOT'
 main: de.bybackfish.schemaconverter.SchematicaConverter
 api-version: '1.21'
+depend:
+  - FastAsyncWorldEdit
+commands:
+  bulkconvert:
+    description: Bulk convert files from one format to another
+    usage: /bulkconvert <folder> <current format> [new format] [destination]
+    permission: schematicaconverter.bulkconvert

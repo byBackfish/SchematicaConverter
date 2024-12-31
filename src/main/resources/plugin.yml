@@ -1,0 +1,4 @@
+name: SchematicaConverter
+version: '1.0-SNAPSHOT'
+main: de.bybackfish.schemaconverter.SchematicaConverter
+api-version: '1.21'

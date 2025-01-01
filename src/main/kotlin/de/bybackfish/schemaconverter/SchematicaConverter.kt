@@ -49,7 +49,7 @@ class SchematicaConverter : JavaPlugin() {
             val folderName = args[0]
             val currentFormatName = args[1]
             val newFormatName = if (args.size > 2) args[2] else null
-            val destination = if (args.size > 3) args[3] else "converted"
+            val recursive = if(args.size > 3) args[3] == "true" else false
 
             val currentFormat = findFormatByName(currentFormatName)
             val newFormat = if (newFormatName == null) BuiltInClipboardFormat.FAST_V3 else findFormatByName(newFormatName)
@@ -66,7 +66,7 @@ class SchematicaConverter : JavaPlugin() {
             }
 
             val startTime = System.currentTimeMillis()
-            val folder = dataFolder.resolve(folderName)
+            val folder = dataFolder.resolve("..").resolve("..").resolve(folderName)
 
             if (!folder.exists()) {
                 sender.sendMessage(
@@ -80,12 +80,9 @@ class SchematicaConverter : JavaPlugin() {
                 return true
             }
 
-            val outputFolder = folder.resolve(destination)
-            outputFolder.exists() || outputFolder.mkdirs()
-
             logger.info("Converting files in ${folder.absolutePath}")
 
-            val files = folder.listFiles()?.filter { it.isFile && it.extension == SCHEMATICA_EXTENSION } ?: emptyList()
+            val files = (if (recursive) folder.walk().toList() else folder.listFiles()?.toList())?.filter { it.isFile && it.extension == SCHEMATICA_EXTENSION } ?: emptyList()
 
             if (files.isEmpty()) {
                 sender.sendMessage(Component.text("No files found to convert in $folderName", NamedTextColor.RED))
@@ -95,7 +92,7 @@ class SchematicaConverter : JavaPlugin() {
             sender.sendMessage(Component.text("Converting ${files.size} files...", NamedTextColor.YELLOW))
 
             scope.launch {
-                convertFiles(sender, files, currentFormat, newFormat, outputFolder)
+                convertFiles(sender, files, currentFormat, newFormat)
 
                 val summary = Component.text()
                     .append(Component.text("Done! Conversion complete:", NamedTextColor.GREEN, TextDecoration.BOLD))
@@ -126,19 +123,20 @@ class SchematicaConverter : JavaPlugin() {
             args: Array<out String>?
         ): List<String?>? {
             return when (args?.size) {
-                1 -> dataFolder.list()?.toList() ?: emptyList()
+                1 -> dataFolder.resolve("..").resolve("..").list().toList() ?: emptyList()
                 2, 3 -> BuiltInClipboardFormat.entries.map { it.name }
+                4, -> listOf("true", "false")
                 else -> emptyList()
             }
         }
     }
 
-    suspend fun convertFiles(sender: CommandSender, files: List<File>, currentFormat: BuiltInClipboardFormat, newFormat: BuiltInClipboardFormat, outputFolder: File) {
+    suspend fun convertFiles(sender: CommandSender, files: List<File>, currentFormat: BuiltInClipboardFormat, newFormat: BuiltInClipboardFormat) {
         files.forEach { file ->
             withContext(IO) {
                 try {
-                    val outputFile = outputFolder.resolve(file.name)
-
+                    file.copyTo(file.resolveSibling("${file.name}.back"), overwrite = true)
+                    val outputFile = file.resolveSibling(file.name)
                     currentFormat.load(file).use { clipboard ->
                         clipboard.save(outputFile, newFormat)
                     }
